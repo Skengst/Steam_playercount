@@ -3,9 +3,10 @@ import requests
 import pandas as pd
 import duckdb
 from datetime import datetime
+from dotenv import load_dotenv
 
 #Variables
-API_key = "8D2C0A79C294D216990333F6D68CE577"
+API_key = 
 appid = 1643320
 
 
@@ -57,17 +58,6 @@ def create_database():
     # Creates or connects to the DuckDB database
     conn = duckdb.connect('steam_database.duckdb')
     
-    # Create the player count table
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS playercount (
-            id INTEGER,              -- Unique identifier for each entry
-            game_id INTEGER,         -- Steam App ID of the game
-            hour INTEGER,            -- Hour of the player count record
-            date DATE,               -- Date of the player count record
-            playercount INTEGER      -- Player count at the given time
-        )
-    """)
-    
     # Create the game information table
     conn.execute("""
         CREATE TABLE IF NOT EXISTS game_information (
@@ -80,7 +70,19 @@ def create_database():
             price DECIMAL(6, 2)           -- Price of the game
         )
     """)
-    
+
+    # Create the player count table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS playercount (
+            id INTEGER,              -- Unique identifier for each entry
+            game_id INTEGER,         -- Steam App ID of the game
+            hour INTEGER,            -- Hour of the player count record
+            date DATE,               -- Date of the player count record
+            playercount INTEGER,      -- Player count at the given time
+            FOREIGN KEY (game_id) REFERENCES game_information(game_id)     
+        )
+    """)    
+
     # Create the game genres table
     conn.execute("""
         CREATE TABLE IF NOT EXISTS game_genres (
@@ -94,6 +96,34 @@ def create_database():
     print("Database and tables created successfully.")
     conn.close()
 
+def insert_game_details(conn, appid, game_details):
+    if game_details:
+        # Check if game already exists in the database
+        existing = conn.execute("SELECT COUNT(*) FROM game_information WHERE game_id = ?", (appid,)).fetchone()[0]
+        if existing > 0:
+            print(f"Game ID {appid} already exists in the database. Skipping insertion.")
+            return
+
+        name = game_details.get("name")
+        developer = ", ".join(game_details.get("developers", []))
+        publisher = ", ".join(game_details.get("publishers", []))
+        release_date = game_details.get("release_date", {}).get("date", None)
+        price = game_details.get("price_overview", {}).get("final", 0) / 100.0  # Convert from cents to euros
+
+        conn.execute("""
+            INSERT INTO game_information (game_id, name, developer, publisher, release_date, price)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (appid, name, developer, publisher, release_date, price))
+
+        # Insert genres into game_genres
+        for genre in game_details.get("genres", []):
+            genre_name = genre["description"]
+            conn.execute("""
+                INSERT INTO game_genres (game_id, genre)
+                VALUES (?, ?)
+            """, (appid, genre_name))
+
+        print(f"Game details for App ID {appid} inserted successfully.")
 
 game_details = get_game_details(appid)
 if isinstance(game_details, dict):
