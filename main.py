@@ -11,48 +11,6 @@ appid = 1643320
 
 
 #Functions
-def get_player_count(API_key, appid):
-    url = "https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/"
-    
-    params = {
-        "key": API_key,
-        "appid": appid
-    }
-    
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        if "response" in data and "player_count" in data["response"]:
-            return data["response"]["player_count"]
-        else:
-            return "No player count information available."
-        
-    except requests.exceptions.HTTPError as http_err:
-        return f"HTTP error occurred: {http_err}"
-    except Exception as err:
-        return f"An error occurred: {err}"
-
-def get_game_details(appid):
-    url = f"https://store.steampowered.com/api/appdetails"
-    params = {
-        "appids": appid
-    }
-
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status() 
-        data = response.json()
-        if str(appid) in data and data[str(appid)]["success"]:
-            return data[str(appid)]["data"]
-        else:
-            return "Game details not found"
-    
-    except requests.exceptions.HTTPError as http_err:
-        return f"HTTP error occurred: {http_err}"
-    except Exception as err:
-        return f"An error occurred: {err}"
-
 
 def create_database():
     # Creates or connects to the DuckDB database
@@ -96,6 +54,50 @@ def create_database():
     print("Database and tables created successfully.")
     conn.close()
 
+
+def get_player_count(API_key, appid):
+    url = "https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/"
+    
+    params = {
+        "key": API_key,
+        "appid": appid
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+        if "response" in data and "player_count" in data["response"]:
+            return data["response"]["player_count"]
+        else:
+            return "No player count information available."
+        
+    except requests.exceptions.HTTPError as http_err:
+        return f"HTTP error occurred: {http_err}"
+    except Exception as err:
+        return f"An error occurred: {err}"
+
+def get_game_details(appid):
+    url = f"https://store.steampowered.com/api/appdetails"
+    params = {
+        "appids": appid
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status() 
+        data = response.json()
+        if str(appid) in data and data[str(appid)]["success"]:
+            return data[str(appid)]["data"]
+        else:
+            return "Game details not found"
+    
+    except requests.exceptions.HTTPError as http_err:
+        return f"HTTP error occurred: {http_err}"
+    except Exception as err:
+        return f"An error occurred: {err}"
+
+
 def insert_game_details(conn, appid, game_details):
     if game_details:
         # Check if game already exists in the database
@@ -124,6 +126,20 @@ def insert_game_details(conn, appid, game_details):
             """, (appid, genre_name))
 
         print(f"Game details for App ID {appid} inserted successfully.")
+
+def insert_player_count(conn, appid, player_count):
+    if player_count is not None:
+        now = datetime.now()
+        hour = now.hour
+        date = now.date()
+
+        conn.execute("""
+            INSERT INTO playercount (game_id, hour, date, playercount)
+            VALUES (?, ?, ?, ?)
+        """, (appid, hour, date, player_count))
+
+        print(f"Player count for App ID {appid} inserted successfully.")
+
 
 game_details = get_game_details(appid)
 if isinstance(game_details, dict):
