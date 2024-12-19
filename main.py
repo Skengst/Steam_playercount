@@ -25,7 +25,6 @@ def create_database():
             developer TEXT,               -- Developer of the game
             publisher TEXT,               -- Publisher of the game
             release_date DATE,            -- Release date of the game
-            genre_id INTEGER,             -- Foreign key to the game_genres table
             price DECIMAL(6, 2)           -- Price of the game
         )
     """)
