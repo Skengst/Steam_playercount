@@ -2,6 +2,7 @@
 import requests
 import pandas as pd
 import duckdb
+import csv
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -140,17 +141,20 @@ def insert_player_count(conn, appid, player_count):
 
         print(f"Player count for App ID {appid} inserted successfully.")
 
-
-game_details = get_game_details(appid)
-if isinstance(game_details, dict):
-    print(f"Game Name: {game_details['name']}")
-    print(f"Description: {game_details['short_description']}")
-    print(f"Genres: {[genre['description'] for genre in game_details['genres']]}")
-    print(f"Price: {game_details['price_overview']['final_formatted']}" if 'price_overview' in game_details else "Free or not available for sale")
-    print(f"Platforms: {', '.join([platform for platform, supported in game_details['platforms'].items() if supported])}")
-else:
-    print(game_details)
-#Start of program
-#if __init__ == "__main__":
+def process_games_from_csv(csv_file, conn):
+    appid_list = pd.read_csv(csv_file)["appid"].tolist()
     
-#    main  
+    for appid in appid_list:
+        game_details = get_game_details(appid)
+        insert_game_details(conn, appid, game_details)
+
+        player_count = get_player_count(API_key, appid)
+        insert_player_count(conn, appid, player_count)
+
+
+#Start of program
+if __init__ == "__main__":
+    create_database()
+    conn = duckdb.connect('steam_database.duckdb')
+    
+    process_games_from_csv('game_id.csv', conn)
