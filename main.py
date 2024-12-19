@@ -33,12 +33,12 @@ def create_database():
     # Create the player count table
     conn.execute("""
         CREATE TABLE IF NOT EXISTS playercount (
-            id INTEGER,              -- Unique identifier for each entry
             game_id INTEGER,         -- Steam App ID of the game
             hour INTEGER,            -- Hour of the player count record
             date DATE,               -- Date of the player count record
-            playercount INTEGER,      -- Player count at the given time
-            FOREIGN KEY (game_id) REFERENCES game_information(game_id)     
+            playercount INTEGER,     -- Player count at the given time
+            FOREIGN KEY (game_id) REFERENCES game_information(game_id),
+            UNIQUE (game_id, hour, date)   
         )
     """)    
 
@@ -148,6 +148,7 @@ def insert_player_count(conn, appid, player_count):
         conn.execute("""
             INSERT INTO playercount (game_id, hour, date, playercount)
             VALUES (?, ?, ?, ?)
+            ON CONFLICT DO NOTHING
         """, (appid, hour, date, player_count))
 
         print(f"Player count for App ID {appid} inserted successfully.")
