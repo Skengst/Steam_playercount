@@ -7,8 +7,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 #Variables
-API_key = 
-appid = 1643320
 
 
 #Functions
