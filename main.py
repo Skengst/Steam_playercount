@@ -2,9 +2,11 @@
 import requests
 import pandas as pd
 import duckdb
-import csv
+import os
+import hashlib
 from datetime import datetime
 from dotenv import load_dotenv
+
 
 #Variables
 
@@ -109,6 +111,11 @@ def insert_game_details(conn, appid, game_details):
         developer = ", ".join(game_details.get("developers", []))
         publisher = ", ".join(game_details.get("publishers", []))
         release_date = game_details.get("release_date", {}).get("date", None)
+        if release_date:
+            try:
+                release_date = datetime.strptime(release_date, "%d %b, %Y").date()
+            except ValueError:
+                release_date = None  # Handle cases where the format is unexpected
         price = game_details.get("price_overview", {}).get("final", 0) / 100.0  # Convert from cents to euros
 
         conn.execute("""
@@ -119,10 +126,16 @@ def insert_game_details(conn, appid, game_details):
         # Insert genres into game_genres
         for genre in game_details.get("genres", []):
             genre_name = genre["description"]
+            
+            # Create a deterministic hash-based ID
+            unique_string = f"{appid}:{genre_name}"
+            genre_id = int(hashlib.sha256(unique_string.encode()).hexdigest(), 16) % (10**9)  # Truncate hash to fit an INTEGER
+
             conn.execute("""
-                INSERT INTO game_genres (game_id, genre)
-                VALUES (?, ?)
-            """, (appid, genre_name))
+                INSERT INTO game_genres (genre_id, game_id, genre)
+                VALUES (?, ?, ?)
+                ON CONFLICT DO NOTHING
+            """, (genre_id, appid, genre_name))
 
         print(f"Game details for App ID {appid} inserted successfully.")
 
@@ -143,16 +156,26 @@ def process_games_from_csv(csv_file, conn):
     appid_list = pd.read_csv(csv_file)["appid"].tolist()
     
     for appid in appid_list:
-        game_details = get_game_details(appid)
-        insert_game_details(conn, appid, game_details)
+        try: 
+            game_details = get_game_details(appid)
+            insert_game_details(conn, appid, game_details)
 
-        player_count = get_player_count(API_key, appid)
-        insert_player_count(conn, appid, player_count)
+            player_count = get_player_count(API_key, appid)
+            insert_player_count(conn, appid, player_count)
+        except Exception as e:
+            print(f"Error processing appid {appid}: {e}")
 
 
 #Start of program
-if __init__ == "__main__":
-    create_database()
-    conn = duckdb.connect('steam_database.duckdb')
+if __name__ == "__main__":
+    load_dotenv()
+    API_key = os.getenv("API_KEY")
+
+    if not API_key:
+        print("API Key not found. Please check your .env file.")
+        exit(1)
     
-    process_games_from_csv('game_id.csv', conn)
+    create_database()
+
+    with duckdb.connect('steam_database.duckdb') as conn:
+        process_games_from_csv('game_id.csv', conn)
