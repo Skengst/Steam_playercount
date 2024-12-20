@@ -9,9 +9,19 @@ load_dotenv()  # This assumes the .env file is in the same directory as this scr
 # Define an operation to run the main.py script
 @op
 def run_main_py():
-    # Change directory to where main.py resides
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    subprocess.run(["python", os.path.join(script_dir, "main.py")], check=True)
+    try:
+        result = subprocess.run(
+            [os.path.join(script_dir, ".venv", "Scripts", "python.exe"), os.path.join(script_dir, "main.py")],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print(result.stdout)  # Log standard output
+        print(result.stderr)  # Log error outputs
+    except subprocess.CalledProcessError as e:
+        print(f"Subprocess failed with error: {e.stderr}")
+        raise
 
 # Define a job that uses the operation
 @job

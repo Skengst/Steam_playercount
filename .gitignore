@@ -1,6 +1,7 @@
 # DuckDB related files
 .open
 steam_database.duckdb
+steam_database.duckdb.wal
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
