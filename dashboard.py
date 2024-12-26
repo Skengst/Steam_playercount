@@ -30,33 +30,26 @@ def page1():
     """
     df = conn.execute(query).fetchdf()
 
-
-    # Filter by game name
     selected_names = st.multiselect("Select games to filter", options=df['name'].unique(), default=df['name'].unique())
     filtered_df = df[df['name'].isin(selected_names)]
 
-    # Group by hour and sum up the player counts
     average_player_per_hour = filtered_df.groupby('hour')['playercount'].mean().reset_index()
-
-
-    # Create a Streamlit line chart
+ 
+    #Linechart
     st.line_chart(data=average_player_per_hour, x='hour', y='playercount', width=0, height=0)
 
-    # Get Unique dates for each game.
-    game_share_day_count = filtered_df.groupby('name')['date'].nunique().reset_index()
+    day_count = filtered_df.groupby('name')['date'].nunique().reset_index()
 
-    # Get total playercount for game
-    game_share = filtered_df.groupby('name')['playercount'].sum().reset_index()
+    player_count_per_game = filtered_df.groupby('name')['playercount'].sum().reset_index()
 
-    # Get Average Daily playercount
-    game_share['avg_playercount_per_day'] = game_share['playercount'] / game_share_day_count['date']
+    player_count_per_game['avg_playercount_per_day'] = player_count_per_game['playercount'] / day_count['date']
 
-    # Create a pie chart using Plotly Express with customized tooltip
+    # Pie Chart
     fig = px.pie(
-        game_share,
+        player_count_per_game,
         values='avg_playercount_per_day',
         names='name',
-        title='Average Player Count per Day by Game',
+        title='Average Player Count per Day',
         hover_data={'avg_playercount_per_day': True, 'name': True},
         labels={'avg_playercount_per_day': 'Avg Players/Day', 'name': 'Game Name'}
     )
@@ -86,11 +79,10 @@ def page2():
         g.game_id = p.game_id
     """
     df = conn.execute(query).fetchdf()
-        # Ensure 'weekday' is an integer type
+    
+    # Ensure 'weekday' is an integer type
     if df['weekday'].dtype != 'int64' and df['weekday'].dtype != 'int32':
         df['weekday'] = df['weekday'].astype(int)
-
-
 
     df['weekday_name'] = df['weekday'].apply(weekday_to_name)
 
