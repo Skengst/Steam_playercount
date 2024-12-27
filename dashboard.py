@@ -135,7 +135,7 @@ def page3():
         p.hour;
     """
     df = conn.execute(query).fetchdf()
-    selected_genres = st.multiselect("Select games to filter", options=df['genre'].unique(), default=df['genre'].unique())
+    selected_genres = st.multiselect("Select genres to filter", options=df['genre'].unique(), default=df['genre'].unique())
     filtered_df = df[df['genre'].isin(selected_genres)]
     
     player_count_per_genre = filtered_df.groupby('genre')['playercount'].sum().reset_index()
